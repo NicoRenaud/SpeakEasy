@@ -1,0 +1,182 @@
+#include "../defMacro.h"
+
+
+///////////////////////////////////////////////////////
+// Define the one exciton eigenenergies from H
+///////////////////////////////////////////////////////
+void compute_energies(float *E, float *H, int nState)
+{
+  
+  int i,j,k=1;
+  float *vect_prp, *val_prp;
+  
+  
+  // alloc memory
+  val_prp = calloc(nState,sizeof(float));
+  vect_prp = calloc(nState*nState,sizeof(float));
+  
+  // diagonalise the Hamiltonian
+  spec(vect_prp, val_prp, H, nState);
+  
+  
+  //store the simply excited energies
+  for(i=0;i<nState;i++)
+    E[i+1] = val_prp[i];
+  
+  // compute the doubly excited energies
+  for(i=0;i<nState;i++)
+  {
+    for(j=i;j<nState;j++)
+    {
+      E[nState+k] = val_prp[i]+val_prp[j];
+      k++;
+    }
+  }
+  
+  // free memory
+  free(val_prp);
+  free(vect_prp);
+
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Define the reaxation matrix elements from the Hamiltonian
+//////////////////////////////////////////////////////////////////////////////////////////
+void define_relax_from_h(float *R, float *H, float gama_0, int nState, float temp)
+{
+  
+  int i,j,k=0;
+  float *vect_prp, *val_prp;
+  float S;
+  float beta = 1/(8.05*1E-5*temp);
+  float dE;
+  
+  // alloc memory
+  val_prp = calloc(nState,sizeof(float));
+  vect_prp = calloc(nState*nState,sizeof(float));
+  
+  // diagonalise the Hamiltonian
+  spec(vect_prp, val_prp, H, nState);
+  
+  // loop over the overlaps
+  for(i=0;i<nState-1;i++)
+  {
+    for(j=i+1;j<nState;j++)
+    {
+      
+      // energy difference
+      dE = val_prp[i]-val_prp[j];
+      
+      // comput the overlap
+      S = 0;
+      for (k=0;k<nState;k++)
+          S += abs( vect_prp[k*nState+i]*vect_prp[k*nState+j] );
+      
+      R[i*nState+j] = gama_0*S*exp(beta*dE)/(1+exp(beta*dE));
+      R[j*nState+i] = gama_0*S/(1+exp(beta*dE));
+      
+    }
+    
+  }
+  
+  free(val_prp);
+  free(vect_prp);
+  
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Define the reaxation matrix elements from the Hamiltonian
+//////////////////////////////////////////////////////////////////////////////////////////
+void define_dephas(float *R, float *H, float gama_0, int nState, float sigma,float temp)
+{
+  
+  int i;
+  float *vect_prp, *val_prp;
+  float S;
+  float beta = 1/(8.05*1E-5*temp);
+  float dE;
+  
+  // alloc memory
+  val_prp = calloc(nState,sizeof(float));
+  vect_prp = calloc(nState*nState,sizeof(float));
+  
+  // diagonalise the Hamiltonian
+  spec(vect_prp, val_prp, H, nState);
+  
+  // loop over the overlaps
+  for(i=0;i<nState;i++)  
+      R[i*nState+i] = gama_0*S*exp( -(val_prp[i]*val_prp[i])/sigma/sigma   );
+     
+  
+  free(val_prp);
+  free(vect_prp);
+  
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Define the absorbtion ground -> singlet excited state
+//////////////////////////////////////////////////////////////////////////////////////////
+
+void define_grd2sgl_dipole(float *D,float * H, int nState, float grd2sgl_dipole, float grd2sgl_freq, float grd2sgl_width)
+{
+  
+  int i,j,k=0;
+  float *vect_prp, *val_prp;
+  float W;
+  
+  // alloc memory
+  val_prp = calloc(nState,sizeof(float));
+  vect_prp = calloc(nState*nState,sizeof(float));
+  
+  // diagonalise the Hamiltonian
+  spec(vect_prp, val_prp, H, nState);
+  
+  // compute dipole
+  for(i=0;i<nState;i++)
+  {
+    W = (val_prp[i]-grd2sgl_freq);
+    D[i] = grd2sgl_dipole*exp(   -(W*W)/grd2sgl_width/grd2sgl_width);
+  }
+  
+  free(vect_prp);
+  free(val_prp);
+  
+
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// Define the absorbtion singlet ->  double excited state via the ground -> singlet absorption
+////////////////////////////////////////////////////////////////////////////////////////////////
+void define_sgl2dbl_dipole(float *D2,float *D1, int *ind1, int n1, int *ind2, int n2)
+{
+  
+  int i,j;
+  
+  
+  
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Define the absorbtion singlet ->  double excited state via a Gaussian
+//////////////////////////////////////////////////////////////////////////////////////////
+void define_sgl2dbl_dipole_gsn(float *D,float *E, int *ind1, int n1, int *ind2, int n2, float sgl2dbl_dipole, float sgl2dbl_freq, float sgl2dbl_width)
+{
+  
+  int i,j;
+  float W;
+  int ntot = n1+n2;
+  
+  for(i=0;i<n1;i++)
+  {
+    for(j=0;j<n2;j++) 
+    {
+      W = E[ind1[i]]-E[ind2[j]]-sgl2dbl_freq;
+      D[i*ntot+j] = sgl2dbl_dipole * exp( -W*W/sgl2dbl_width/sgl2dbl_width );
+    }
+  }
+  
+}

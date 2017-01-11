@@ -1,0 +1,8 @@
+////////////////////////////////////////////////
+// compute the ivnerse of a inverse matrix
+////////////////////////////////////////////////
+
+#ifndef cplx_inv_h
+#define cplx_inv_h
+void invMatComp(complex float *M_INV, complex float *M_OR, int size);
+#endif
